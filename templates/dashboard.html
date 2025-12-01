@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Automation Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="container mx-auto p-6">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold mb-2">🎬 YouTube Automation Dashboard</h1>
+            <p class="text-gray-400">Autonomous content creation pipeline</p>
+        </header>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-4 gap-4 mb-8">
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-gray-400 text-sm">Total Videos</h3>
+                <p class="text-3xl font-bold" id="total-videos">0</p>
+            </div>
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-gray-400 text-sm">Ready to Upload</h3>
+                <p class="text-3xl font-bold text-green-500" id="ready-videos">0</p>
+            </div>
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-gray-400 text-sm">Total Views</h3>
+                <p class="text-3xl font-bold text-blue-500" id="total-views">0</p>
+            </div>
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h3 class="text-gray-400 text-sm">Avg Retention</h3>
+                <p class="text-3xl font-bold text-purple-500" id="avg-retention">0%</p>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mb-8">
+            <button onclick="createVideo()" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold">
+                ▶️ Create New Video
+            </button>
+            <button onclick="loadVideos()" class="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-semibold ml-2">
+                🔄 Refresh
+            </button>
+        </div>
+
+        <!-- Videos Pipeline -->
+        <div class="bg-gray-800 rounded-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">Content Pipeline</h2>
+            <div id="videos-container" class="space-y-4">
+                <!-- Videos will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadStats() {
+            const res = await fetch('/api/stats');
+            const stats = await res.json();
+            document.getElementById('total-videos').textContent = stats.total_videos;
+            document.getElementById('ready-videos').textContent = stats.ready;
+            document.getElementById('total-views').textContent = stats.total_views.toLocaleString();
+            document.getElementById('avg-retention').textContent = (stats.avg_retention * 100).toFixed(1) + '%';
+        }
+
+        async function loadVideos() {
+            const res = await fetch('/api/videos');
+            const videos = await res.json();
+            const container = document.getElementById('videos-container');
+            
+            if (videos.length === 0) {
+                container.innerHTML = '<p class="text-gray-400">No videos yet. Click "Create New Video" to start.</p>';
+                return;
+            }
+            
+            container.innerHTML = videos.map(video => `
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h3 class="font-bold text-lg">${video.topic || 'Untitled'}</h3>
+                            <p class="text-sm text-gray-400 mt-1">Created: ${new Date(video.created_at).toLocaleString()}</p>
+                            <div class="mt-2">
+                                <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStageColor(video.stage)}">
+                                    ${video.stage}
+                                </span>
+                                <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold ml-2 ${getStatusColor(video.status)}">
+                                    ${video.status}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            ${video.video_path ? `<a href="${video.video_path}" class="text-blue-400 hover:underline text-sm">📹 View Video</a>` : ''}
+                            ${video.scheduled_time ? `<p class="text-xs text-gray-400 mt-1">📅 ${new Date(video.scheduled_time).toLocaleString()}</p>` : ''}
+                        </div>
+                    </div>
+                    ${video.error_log ? `<div class="mt-2 p-2 bg-red-900/30 rounded text-xs text-red-300">${video.error_log.substring(0, 200)}...</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function getStageColor(stage) {
+            const colors = {
+                'sourcing': 'bg-yellow-600',
+                'script_generation': 'bg-orange-600',
+                'audio_generation': 'bg-purple-600',
+                'video_generation': 'bg-blue-600',
+                'metadata_generation': 'bg-indigo-600',
+                'scheduling': 'bg-green-600',
+                'scheduled': 'bg-green-500'
+            };
+            return colors[stage] || 'bg-gray-600';
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                'pending': 'bg-yellow-700',
+                'ready': 'bg-green-700',
+                'uploaded': 'bg-blue-700',
+                'failed': 'bg-red-700'
+            };
+            return colors[status] || 'bg-gray-700';
+        }
+
+        async function createVideo() {
+            if (!confirm('Start creating a new video? This will run the full pipeline.')) return;
+            
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Creating...';
+            
+            await fetch('/api/create', { method: 'POST' });
+            
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = '▶️ Create New Video';
+                loadVideos();
+                loadStats();
+            }, 2000);
+        }
+
+        // Auto-refresh every 10 seconds
+        setInterval(() => {
+            loadVideos();
+            loadStats();
+        }, 10000);
+
+        // Initial load
+        loadVideos();
+        loadStats();
+    </script>
+</body>
+</html>
