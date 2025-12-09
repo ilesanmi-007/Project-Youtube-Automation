@@ -1,3 +1,6 @@
+# Environment variables
+.env
+
 # Python
 __pycache__/
 *.py[cod]
@@ -7,18 +10,26 @@ __pycache__/
 env/
 venv/
 ENV/
-build/
-dist/
-*.egg-info/
 
-# Node
-node_modules/
-npm-debug.log
-yarn-error.log
+# Database
+*.db
+*.db-shm
+*.db-wal
 
-# Environment variables
-.env
-.env.local
+# Output files
+output/scripts/*
+output/audio/*
+output/videos/*
+output/thumbnails/*
+!output/scripts/.gitkeep
+!output/audio/.gitkeep
+!output/videos/.gitkeep
+!output/thumbnails/.gitkeep
+
+# Logs
+*.log
+dashboard.log
+dashboard.pid
 
 # IDE
 .vscode/
@@ -30,7 +41,6 @@ yarn-error.log
 .DS_Store
 Thumbs.db
 
-# Project specific
-downloads/
-output/
-temp/
+# API credentials
+client_secret*.json
+token.json
